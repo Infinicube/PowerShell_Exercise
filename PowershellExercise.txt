@@ -26,3 +26,92 @@ foreach($box in $evilClients) {
     }
             } | Select-Object recordid, message | Format-List > newaccounts.csv  
     
+    #First have 2 .txt files with 'client' and 'security' IPs
+
+#Makes a variable that has all the Client IPs
+$evilClients = Get-Content C:\Users\Administrator\Documents\EvilClients.txt
+echo $evilClients #Makes a variable that has all the Security IPs
+#$evilSecurities = Get-Content C:\Users\bhazl\Documents\security_subnet.txt
+#makes creds MAY CHANGE LATER DUE TO IMPROPER SECURITY PRACTICE. *REPEAT: THIS IS NOT SECURE*
+#$creds = Get-Credential
+
+#Event ID 106 on Windows 7, Server 2008 R2 - Scheduled task registered
+#Event ID 140 on Windows 7, Server 2008 R2 / 4702 on Windows 10, Server 2016 - Scheduled task updated
+#Event ID 141 on Windows 7, Server 2008 R2 / 4699 on Windows 10, Server 2016 - Scheduled task deleted
+#Event ID 4698 on Windows 10, Server 2016 - Scheduled task created
+#Event ID 4700 on Windows 10, Server 2016 - Scheduled task enabled
+#Event ID 4701 on Windows 10, Server 2016 - Scheduled task disable
+foreach($box in $evilClients) {
+    $target1 = @{
+        computername = $box
+        credential = $creds
+    }
+    icm @target1 {
+        $logfilter = @{}
+        $logfilter.logname = "security"
+        $logfilter.id = 4698,4700,4701
+        Get-WinEvent -FilterHashtable $logfilter | ?{$_.message -like "*$SID*"}
+    } | Select-Object recordid, message > Win10SchedTasks.
+    
+
+}
+
+#fuckfuckfuckfuckfuckfuckfuckfuckfuckfuckfuckfuckfuckfuckfuckfuck
+#fuckfuckfuckfuckfuckfuckfuckfuckfuckfuckfuckfuckfuckfuckfuckfuck
+#fuckfuckfuckfuckfuckfuckfuckfuckfuckfuckfuckfuckfuckfuckfuckfuck
+
+foreach($ComputerName in $evilClients) {
+    Invoke-Command -ComputerName $ComputerName -Credential $creds {
+        Get-WmiObject win32_process |
+        Select-Object csname,Name,ProcessID,Path,CommandLine,
+        @{n="hash";e={ if($_.Path) {(certutil.exe -hashfile $_.Path SHA256)[1] -replace " ","" } else { $null } } },
+        @{n="user";e={$_.GetOwner().Domain + "\" + $_.GetOwner().User}}
+    } | out-file -append ClientProcesses.txt # End of Script Block
+} 
+
+foreach($ComputerName in $evilClients) {
+    Invoke-Command -ComputerName $ComputerName -Credential $creds -ScriptBlock {
+        Get-WmiObject win32_Service | Select-Object Name,PathName,State,StartMode,StartName #| out-file -append ClientServices.txt
+    } | out-file -append ClientServices.txt # End of Script Block
+} 
+$KeyLoc = Get-Content C:\Users\Administrator\Documents\regkeyLoc.txt
+foreach($ComputerName in $evilClients) {
+    Invoke-Command -ComputerName $ComputerName -Credential $creds -ScriptBlock {
+        Get-ItemProperty registry::HKCU\Software\Microsoft\Windows\CurrentVersion\Run;
+        echo ----------------HKCU..RUN--------------------
+#        gci registry::HKCU\Software\Microsoft\Windows\CurrentVersion\RunOnce;
+        Get-ItemProperty registry::HKLM\Software\Microsoft\Windows\CurrentVersion\Run;
+        echo ----------------HKLM..RUN--------------------
+        Get-ItemProperty registry::HKlm\Software\Microsoft\Windows\CurrentVersion\RunOnce
+        echo '----------------HKLM..RUNONCE--------------------'
+        Get-ItemProperty registry::HKEY_CURRENT_USER\Software\Microsoft\Windows\CurrentVersion\Explorer\'User Shell Folders'
+        echo '----------------HKCU..User Shell Folders--------------------'
+        Get-ItemProperty registry::HKEY_CURRENT_USER\Software\Microsoft\Windows\CurrentVersion\Explorer\'Shell Folders'
+        echo '----------------HKCU..Shell Folders--------------------'
+        Get-ItemProperty registry::HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\'Shell Folders'
+        echo '----------------HKLM..Shell Folders--------------------'
+        Get-ItemProperty registry::HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\'User Shell Folders'
+        echo '----------------HKLM..User Shell Folders--------------------'
+        Get-ItemProperty registry::HKEY_CURRENT_USER\Software\Microsoft\Windows\CurrentVersion\Explorer\'User Shell Folders'
+        echo '----------------HKCU..User Shell Folders--------------------'
+        Get-ItemProperty registry::HKEY_CURRENT_USER\Software\Microsoft\Windows\CurrentVersion\Explorer\'Shell Folders'
+        echo '----------------HKCU..Shell Folders--------------------'
+        Get-ItemProperty registry::HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\'Shell Folders'
+        echo '----------------HKLM..Shell Folders--------------------'
+        Get-ItemProperty registry::HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\'User Shell Folders'
+        echo '----------------HKLM..User Shell Folders--------------------'
+        Get-ItemProperty registry::"HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Winlogon"
+        echo fuck~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ #| out-file -append ClientServices.txt
+
+        Get-ItemProperty registry::"HKLM\Software\Wow6432Node\Microsoft\Windows NT\CurrentVersion\Winlogon\"
+        echo fuck~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ 
+        Get-ItemProperty registry::"HKCU\Software\Microsoft\Windows NT\CurrentVersion\Winlogon\"
+    } | out-file -append ShitDick.txt
+echo $ComputerName|Out-File -append .\ShitDick.txt
+}
+
+foreach($ComputerName in $evilClients) {
+    Invoke-Command -ComputerName $ComputerName -Credential $creds -ScriptBlock {
+        foreach($Key in $KeyLoc) {gci $Key} #| out-file -append ClientServices.txt
+    }
+}
