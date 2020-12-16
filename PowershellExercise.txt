@@ -1,0 +1,28 @@
+#First have 2 .txt files with 'client' and 'security' IPs
+
+#Makes a variable that has all the Client IPs
+$evilClients = Get-Content C:\Users\bhazl\Documents\client_subnet.txt
+#Makes a variable that has all the Security IPs
+$evilSecurities = Get-Content C:\Users\bhazl\Documents\security_subnet.txt
+#makes creds MAY CHANGE LATER DUE TO IMPROPER SECURITY PRACTICE. *REPEAT: THIS IS NOT SECURE*
+$creds = Get-Credential
+
+#Event ID 106 on Windows 7, Server 2008 R2 - Scheduled task registered
+#Event ID 140 on Windows 7, Server 2008 R2 / 4702 on Windows 10, Server 2016 - Scheduled task updated
+#Event ID 141 on Windows 7, Server 2008 R2 / 4699 on Windows 10, Server 2016 - Scheduled task deleted
+#Event ID 4698 on Windows 10, Server 2016 - Scheduled task created
+#Event ID 4700 on Windows 10, Server 2016 - Scheduled task enabled
+#Event ID 4701 on Windows 10, Server 2016 - Scheduled task disable
+foreach($box in $evilClients) {
+    $target1 = @{
+        computername = $targets
+        credential = $creds
+    }
+    icm @target1 {
+        $logfilter = @{}
+        $logfilter.logname = "security"
+        $logfilter.id = 4270,4728,4732,4756
+        Get-WinEvent -FilterHashtable $logfilter | ?{$_.message -like "*$SID*"
+    }
+            } | Select-Object recordid, message | Format-List > newaccounts.csv  
+    
